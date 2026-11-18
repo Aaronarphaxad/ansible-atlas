@@ -164,7 +164,7 @@ details.dsec[open]>summary{margin-bottom:6px}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .chip.off{text-decoration:line-through;color:var(--muted)}
 .cmd{display:flex;gap:8px;align-items:center}
-.cmd code{flex:1;padding:6px 8px;display:block;white-space:pre-wrap}
+.cmd code{flex:1;padding:6px 8px;display:block;white-space:pre-wrap;word-break:break-all}
 .sumline{font-size:13px;margin:0 0 10px;color:var(--muted)}
 .sumline b{color:var(--ink)}
 .step.skip{opacity:.38}
@@ -843,14 +843,13 @@ function renderPlan(){
     el("div",{class:"row"},el("label",null,"--tags",inTags),el("label",null,"--skip-tags",inSkip),el("label",null,"--limit",inLimit),
       el("label",{style:"flex-direction:row;align-items:center;gap:6px"},showSkipped,"show skipped steps"),
       el("button",{class:"btn",onclick:()=>{planState.tags=planState.skip=planState.limit="";inTags.value=inSkip.value=inLimit.value="";draw();}},"Clear")),
-    allTags.length?el("div",null,el("div",{class:"note",style:"margin-bottom:4px"},"Tags used in this playbook (click: add to --tags · shift-click: add to --skip-tags)"),tagChips):el("div",{class:"note"},"This playbook uses no tags."),
-    el("div",{class:"cmd"},cmd,copyBtn));
+    allTags.length?el("div",null,el("div",{class:"note",style:"margin-bottom:4px"},"Tags used in this playbook (click: add to --tags · shift-click: add to --skip-tags)"),tagChips):el("div",{class:"note"},"This playbook uses no tags."));
   const toggleIn=(field,input,t)=>{const l=splitList(planState[field]);const i=l.indexOf(t);if(i>=0)l.splice(i,1);else l.push(t);planState[field]=l.join(",");input.value=planState[field];draw();};
   page.append(el("h1",null,"What happens when you run it"),
     el("p",{class:"note"},"Steps in the order Ansible runs them. Imported playbooks are followed, role dependencies run before the role, and blocks and includes are expanded. ",el("span",{class:"cond"},"when"),"-conditions can still skip steps at runtime."),
     el("div",{class:"planbar"},el("label",null,"Playbook",pbSel),invs.length?el("label",null,"Inventory",invSel):null,fbtn,el("label",null,flt),
       el("button",{class:"btn",onclick:()=>select(planState.pb,{})},"Playbook details")),
-
+    el("div",{class:"cmd",style:"margin:-4px 0 12px"},el("span",{class:"note",style:"white-space:nowrap"},"Command"),cmd,copyBtn),
     panel);
   const sum=el("p",{class:"sumline"});page.append(sum);
   const body=el("div");page.append(body);
