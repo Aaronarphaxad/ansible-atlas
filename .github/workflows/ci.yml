@@ -1,34 +1,25 @@
 name: CI
 
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - run: pip install pyyaml
-      - name: Unit tests
-        run: python -m unittest discover -s tests -v
 
-  no-generated-output:
-    # A generated map contains real hostnames, IPs and variables. Fail the build
-    # if one (or a private key) ever lands in the repository.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Refuse generated Atlas maps and private keys
+      # Use the runner's own Python 3 (no setup-python download that can go
+      # missing when GitHub moves to a new Ubuntu image) and the distro's PyYAML.
+      - name: PyYAML
+        run: python3 -c "import yaml" 2>/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq python3-yaml)
+
+      - name: Tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: No generated maps or private keys committed
         run: |
           MARK="ansible-atlas-""generated-output"
           bad=$(git grep -lF "$MARK" -- . || true)
@@ -36,4 +27,3 @@ jobs:
           if [ -n "$bad$keys" ]; then
             echo "::error::Generated output or private keys committed:"; echo "$bad"; echo "$keys"; exit 1
           fi
-          echo "clean"
