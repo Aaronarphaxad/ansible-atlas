@@ -1,0 +1,5 @@
+nginx_workers: 2
+app_port: 3000
+enable_tls: false
+tls_cert_path: /etc/ssl/certs/app.pem
+tls_key_path: /etc/ssl/private/app.key

@@ -1,0 +1,5 @@
+mongodb_version: "7.0"
+mongodb_port: 27017
+api_token: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  3133

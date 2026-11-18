@@ -1,0 +1,12 @@
+[web]
+app-web01 ansible_host=10.1.0.11 http_port=80
+app-web[02:03]
+
+[mongo]
+app-mongo01
+
+[db:children]
+mongo
+
+[web:vars]
+nginx_workers=4

@@ -1,0 +1,20 @@
+- name: Install nginx
+  package:
+    name: nginx
+  tags: [packages]
+
+- name: Deploy site config
+  ansible.builtin.template:
+    src: site.conf.j2
+    dest: /etc/nginx/conf.d/app.conf
+    mode: "0644"
+  notify: reload nginx
+  tags: [config]
+
+- name: Open firewall for HTTP
+  community.general.ufw:
+    rule: allow
+    port: "{{ http_port }}"
+    proto: tcp
+  when: enable_firewall | default(true)
+  tags: [firewall, never]

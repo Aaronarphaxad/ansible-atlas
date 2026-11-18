@@ -1,0 +1,5 @@
+galaxy_info:
+  author: example
+  description: Installs MongoDB
+dependencies:
+  - role: common

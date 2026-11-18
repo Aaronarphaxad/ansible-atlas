@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Ansible Atlas pre-commit guard.
+# Blocks commits that include a generated Atlas map (they contain hostnames,
+# IPs and variable values) or obvious secrets.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+set -euo pipefail
+
+# Built from two parts so this script itself never matches.
+MARK="ansible-atlas-""generated-output"
+fail=0
+# Note: no `grep -q` below; with pipefail it can make `git show` die of SIGPIPE and skip the check.
+
+while IFS= read -r -d '' f; do
+  [ -f "$f" ] || continue
+  if git show ":$f" 2>/dev/null | grep -F "$MARK" >/dev/null; then
+    echo "✖ $f is a generated Ansible Atlas map. It contains data from a real repo; don't commit it." >&2
+    fail=1
+  fi
+  if git show ":$f" 2>/dev/null | grep -E -- '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' >/dev/null; then
+    echo "✖ $f looks like it contains a private key." >&2
+    fail=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ "$fail" -ne 0 ]; then
+  echo "Commit blocked by .githooks/pre-commit. Unstage the file(s) with: git restore --staged <file>" >&2
+  exit 1
+fi

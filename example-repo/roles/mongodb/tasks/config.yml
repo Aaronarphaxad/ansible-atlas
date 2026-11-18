@@ -1,0 +1,8 @@
+- name: Template mongod.conf
+  template: src=mongod.conf.j2 dest=/etc/mongod.conf
+  notify: restart mongod
+- name: Ensure mongod running
+  systemd:
+    name: mongod
+    state: started
+    enabled: true

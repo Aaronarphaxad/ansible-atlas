@@ -1,0 +1,25 @@
+- name: Database servers
+  hosts: mongo
+  become: true
+  roles:
+    - mongodb
+- name: Vector DB
+  hosts: qdrant
+  tasks:
+    - name: Run qdrant container
+      community.docker.docker_container:
+        name: qdrant
+        image: qdrant/qdrant:latest
+        ports: ["6333:6333"]
+        restart_policy: always
+    - include_role:
+        name: common
+        tasks_from: users
+- name: Back up databases from the control node
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Run backup script
+      ansible.builtin.command: ../scripts/backup-db.sh app-mongo01
+      changed_when: true

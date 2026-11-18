@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------------------
+# ALLOWLIST: everything in this repo is ignored unless it is listed below.
+#
+# Ansible Atlas output (the generated .html / .json maps) contains real
+# hostnames, IPs and variable values from whatever repo it was run on.
+# Ignoring everything by default means a generated map, a copied inventory,
+# a vault password file or a stray .env can't be committed by accident,
+# whatever its name or location.
+#
+# Adding a new file to the project? Allow it explicitly here.
+# ---------------------------------------------------------------------------
+/*
+
+!/.gitignore
+!/.gitattributes
+!/.github/
+!/.githooks/
+!/atlas.py
+!/viewer.html
+!/README.md
+!/LICENSE
+!/SECURITY.md
+!/example-repo/
+!/tests/
+
+# Even inside allowed folders, never commit generated or local-only files.
+*.html
+!/viewer.html
+*.md
+!/README.md
+!/SECURITY.md
+*.json
+*.bundle
+*.zip
+.env
+.env.*
+*.pem
+*.key
+*vault_pass*
+*.retry
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/

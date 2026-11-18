@@ -1,0 +1,10 @@
+- name: Create deploy user
+  user:
+    name: deploy
+    groups: sudo
+    shell: /bin/bash
+- name: Add authorized keys
+  ansible.posix.authorized_key:
+    user: deploy
+    key: "{{ lookup('file', 'files/deploy.pub') }}"
+  loop: "{{ deploy_keys }}"

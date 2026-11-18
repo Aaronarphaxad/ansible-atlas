@@ -1,0 +1,16 @@
+# Managed by Ansible - {{ ansible_managed | default('do not edit') }}
+upstream app {
+{% for host in groups['web'] %}
+    server {{ hostvars[host].ansible_host | default(host) }}:{{ app_port }};
+{% endfor %}
+}
+
+server {
+    listen {{ http_port }};
+    server_name {{ server_name | default(inventory_hostname) }};
+{% if enable_tls %}
+    ssl_certificate     {{ tls_cert_path }};
+    ssl_certificate_key {{ tls_key_path }};
+{% endif %}
+    location / { proxy_pass http://app; }
+}

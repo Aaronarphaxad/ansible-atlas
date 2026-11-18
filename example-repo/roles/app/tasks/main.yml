@@ -1,0 +1,21 @@
+- name: Clone app repo
+  git:
+    repo: https://github.com/example/webapp.git
+    dest: /opt/webapp
+    version: "{{ app_release }}"
+- name: npm install
+  community.general.npm:
+    path: /opt/webapp
+- name: Start app with pm2
+  shell: pm2 start /opt/webapp/server.js --name webapp
+  args:
+    chdir: /opt/webapp
+  register: pm2_out
+  changed_when: "'already' not in pm2_out.stdout"
+- name: Wait for port
+  wait_for:
+    port: "{{ http_port }}"
+    timeout: 30
+- name: Run health check script
+  ansible.builtin.script: healthcheck.sh {{ http_port }}
+  changed_when: false

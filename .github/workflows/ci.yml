@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pyyaml
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+  no-generated-output:
+    # A generated map contains real hostnames, IPs and variables. Fail the build
+    # if one (or a private key) ever lands in the repository.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse generated Atlas maps and private keys
+        run: |
+          MARK="ansible-atlas-""generated-output"
+          bad=$(git grep -lF "$MARK" -- . || true)
+          keys=$(git grep -lE -- '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----' -- . || true)
+          if [ -n "$bad$keys" ]; then
+            echo "::error::Generated output or private keys committed:"; echo "$bad"; echo "$keys"; exit 1
+          fi
+          echo "clean"

@@ -1,0 +1,28 @@
+- name: Install base packages
+  tags: [packages]
+  apt:
+    name: [vim, curl, htop, chrony]
+    state: present
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+- import_tasks: users.yml
+- name: Configure chrony
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    mode: "0644"
+  notify: restart chrony
+- name: Security hardening
+  block:
+    - name: Disable root SSH login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: restart sshd
+  rescue:
+    - name: Report failure
+      debug:
+        msg: "Hardening failed"
+  when: harden_ssh | bool

@@ -1,0 +1,10 @@
+- name: Add MongoDB apt key
+  tags: [packages]
+  ansible.builtin.apt_key:
+    url: https://pgp.mongodb.com/server-7.0.asc
+- name: Install mongodb
+  apt:
+    name: mongodb-org
+    state: present
+- include_tasks: config.yml
+  tags: config
