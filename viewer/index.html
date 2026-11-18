@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+  Ansible Atlas viewer: the page shell.
+
+  This is a template, not a page you open directly. atlas.py builds the final single-file
+  map by replacing every include line below with the contents of that file (paths are
+  relative to this folder), then injecting the repo model at the __ATLAS_DATA__ marker in
+  js/core.js. The output has no external dependencies, so it works offline.
+
+  Scripts are plain (non-module) JavaScript concatenated into ONE <script>, so they share a
+  single global scope. Order matters only for code that runs at load time: core.js first
+  (it defines the data and helpers), boot.js last (it starts the app).
+-->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<!-- Offline by design: this policy blocks every network request (no fonts, scripts, images or fetches from anywhere). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ansible Atlas</title>
+<style>
+/* @include css/theme.css */
+/* @include css/layout.css */
+/* @include css/map.css */
+/* @include css/details.css */
+/* @include css/pages.css */
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Ansible Atlas <small id="repoName"></small></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="search">
+    <span class="ico">⌕</span>
+    <input id="q" type="search" placeholder="Search variables, hosts, groups, tasks, roles…  ( / )" autocomplete="off" spellcheck="false">
+    <div class="results" id="results"></div>
+  </div>
+  <button class="iconbtn" id="helpBtn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+  <button class="themebtn" id="themeBtn" title="Toggle light / dark mode (T)"></button>
+</header>
+<main>
+  <!-- #view holds the current tab (a map or a full page); #detail is the right-hand panel. -->
+  <section id="view"></section>
+  <button class="btn showdetail" id="showDetail" title="Show the details panel (])">⇤ Details</button>
+  <div id="resizer"></div>
+  <aside id="detail"></aside>
+</main>
+<script>
+"use strict";
+/* @include js/core.js */
+/* @include js/app.js */
+/* @include js/map-model.js */
+/* @include js/map-view.js */
+/* @include js/map-keyboard.js */
+/* @include js/map-search.js */
+/* @include js/map-hover.js */
+/* @include js/details.js */
+/* @include js/details-renderers.js */
+/* @include js/code-view.js */
+/* @include js/compare.js */
+/* @include js/checks.js */
+/* @include js/run-plan.js */
+/* @include js/files.js */
+/* @include js/overview.js */
+/* @include js/search.js */
+/* @include js/theme.js */
+/* @include js/persistence.js */
+/* @include js/shell.js */
+/* @include js/boot.js */
+</script>
+</body>
+</html>

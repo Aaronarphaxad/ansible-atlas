@@ -1,0 +1,16 @@
+/* Theme tokens (light by default, dark under [data-theme=dark]) and base element styles */
+:root{
+  --bg:#f6f7f9;--panel:#fff;--ink:#1b1f24;--muted:#5f6b7a;--line:#d9dee5;--soft:#eef1f5;--accent:#2563eb;--accent-soft:#dbe7ff;
+  --sel:#f59e0b;--warn:#b45309;--warn-soft:#fff4e0;--code:#f1f3f6;
+  --c-playbook:#2563eb;--c-play:#7c3aed;--c-role:#0d9488;--c-task:#475569;--c-handler:#c2410c;--c-block:#64748b;
+  --c-include:#0891b2;--c-section:#94a3b8;--c-var:#9333ea;--c-template:#be185d;--c-file:#64748b;--c-script:#ca8a04;--c-error:#dc2626;--c-warning:#d97706;--c-info:#2563eb;--c-inventory:#16a34a;--c-group:#15803d;--c-host:#65a30d;--c-root:#334155;--c-missing:#dc2626;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif;font-size:14px;color-scheme:light;
+}
+html[data-theme="dark"]{
+  --bg:#0f1318;--panel:#171c23;--ink:#e6e9ee;--muted:#93a0b0;--line:#2a323d;--soft:#1f262f;--accent:#60a5fa;--accent-soft:#1e3354;
+  --sel:#fbbf24;--warn:#fbbf24;--warn-soft:#3a2d12;--code:#11161c;
+  --c-playbook:#60a5fa;--c-play:#a78bfa;--c-role:#2dd4bf;--c-task:#94a3b8;--c-handler:#fb923c;--c-block:#8b9bb0;
+  --c-include:#22d3ee;--c-section:#64748b;--c-var:#c084fc;--c-template:#f472b6;--c-file:#94a3b8;--c-script:#facc15;--c-error:#f87171;--c-warning:#fbbf24;--c-info:#60a5fa;--c-inventory:#4ade80;--c-group:#34d399;--c-host:#a3e635;--c-root:#cbd5e1;--c-missing:#f87171;color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit;color:inherit}

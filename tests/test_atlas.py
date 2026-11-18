@@ -68,7 +68,8 @@ class AtlasTests(unittest.TestCase):
             html = (Path(d) / "map.html").read_text(encoding="utf-8")
         self.assertIn("default-src 'none'", html)          # browser blocks all network requests
         self.assertIn(atlas.GENERATED_MARKER, html)        # so the hook/CI can refuse to commit it
-        self.assertNotIn(atlas.GENERATED_MARKER, atlas.TEMPLATE.read_text(encoding="utf-8"))
+        self.assertNotIn(atlas.GENERATED_MARKER, atlas.load_template())
+        self.assertNotIn("@include", html)                  # every viewer component was inlined
 
 
 if __name__ == "__main__":

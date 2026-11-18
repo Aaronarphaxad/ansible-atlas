@@ -79,15 +79,15 @@ The map is the only file written. Re-run it whenever the repo changes (it takes 
 
 ## What you get
 
-- **Playbooks map**: playbooks → imported playbooks → plays → pre-tasks / roles / tasks / post-tasks / handlers → role dependencies → tasks, blocks and includes. Zoom, pan, and expand or collapse any node.
+- **Playbooks map**: playbooks → imported playbooks → plays → pre-tasks / roles / tasks / post-tasks / handlers → role dependencies → tasks, blocks and includes. Zoom, pan, and expand or collapse any node. Maps open collapsed to the entry points; hover a node for a quick summary, or move around with the arrow keys.
 - **Roles map**: each role with its dependencies, tasks, handlers, defaults, vars and templates, and which plays use it.
-- **Inventory map**: inventories → groups → child groups → hosts. A host shows its groups, the plays that target it, and its **merged variables**: which file and line set each value, and what it overrides.
+- **Inventory map**: inventories → groups → child groups → hosts. A host shows its groups, the plays that target it, and its **merged variables**: which file and line set each value, and what it overrides. **Compare** two hosts (e.g. a production host and its staging twin) to see their variables, groups and plays side by side with the differences highlighted.
 - **Variables**: click any variable name to see **every place it's defined** (inventory, group_vars, host_vars, role defaults/vars, play vars, `set_fact`, `register`) and **everywhere it's used** (task arguments, `when:`, loops, other variables, templates).
 - **Templates**: open any `.j2` file with line numbers, highlighted Jinja and clickable variables, plus the tasks that render it.
 - **Run plan**: a numbered, step-by-step list of what a playbook does, with target hosts for a chosen inventory. Under **Tags & limit** you can preview `--tags`, `--skip-tags` and `--limit`. It follows Ansible's tag inheritance and the special tags `always`, `never`, `tagged` and `untagged`, and gives you the matching `ansible-playbook` command to copy.
 - **Files & scripts**: browse every file in the repo as a folder tree and read it in the browser, with line numbers and masked secrets. Clicking any `file:line` reference anywhere opens the file at that line. The **Scripts** filter lists shell scripts (`.sh`, `.bash`, `.ps1`, anything with a `#!` line, and `.py`/`.pl`/`.rb` under `scripts/`, `bin/` or `files/`). For each one it shows how it's run: uploaded to hosts by `script:`, run on the control node, copied, scheduled with cron, or not referenced by any task (run by hand).
 - **Checks** (lint): errors such as missing files, unknown handlers and YAML errors; warnings such as undefined variables, plain-text secrets, shell commands where a module exists, plays with no hosts and external roles; and info-level items such as unused variables, roles and handlers, missing `changed_when` or `mode:`, `state: latest` and `ignore_errors`. They appear in the Overview and on the affected item, or in the terminal with `--lint`.
-- **Search** (press `/`): finds variables, hosts, groups, tasks, roles, plays, templates, scripts (including their contents) and files. Narrow results with a prefix such as `var:`, `host:`, `group:`, `task:`, `role:`, `template:` or `file:`.
+- **Search** (press `/`): finds variables, hosts, groups, tasks, roles, plays, templates, scripts (including their contents) and files. Narrow results with a prefix such as `var:`, `host:`, `group:`, `task:`, `role:`, `template:` or `file:`. Matching map nodes are tinted; a bar on the map counts matches hidden in collapsed branches, and `N` / `Shift+N` step through them.
 - **Overview**: counts, checks, inventories, entry playbooks, and parser warnings. `ansible.cfg`, requirements and vault files are folded away until you need them.
 - **Light and dark mode** (dark by default): press `T` or use the ☀/☾ button.
 
@@ -99,6 +99,9 @@ Less-used controls are tucked away: the `⋯` menu holds expand/collapse and lev
 |---|---|
 | `/` | Search |
 | `1`–`6` | Switch tab |
+| `←` `→` `↑` `↓` | Map: parent · first child · previous / next node in the column |
+| `Enter` · `Space` | Map: expand / collapse the selected node |
+| `N` · `Shift+N` | Map: next / previous search match |
 | `F` · double-click empty map | Fit the map to the screen |
 | `]` | Show / hide the details panel (its width is remembered) |
 | `Backspace` · `Alt+←` | Back to the previous item |
@@ -122,12 +125,12 @@ It doesn't assume a fixed layout. It walks the whole folder and identifies files
 
 ## How it works
 
-Ansible Atlas is two files: a Python script that reads your repo (`atlas.py`) and an HTML template that displays the result (`viewer.html`). Generating a map is a one-way, offline step:
+Ansible Atlas has two parts: a Python script that reads your repo (`atlas.py`) and an HTML/CSS/JavaScript template that displays the result (`viewer/`). Generating a map is a one-way, offline step:
 
 ```mermaid
 flowchart LR
   A[Your Ansible repo<br/>files on disk] -->|read only| B[atlas.py<br/>Python + PyYAML]
-  B -->|JSON model| C[viewer.html<br/>template]
+  B -->|JSON model| C[viewer/<br/>template]
   C --> D[ansible-atlas.html<br/>one self-contained file]
   D -->|open locally| F[Your browser<br/>no network]
 ```
@@ -141,9 +144,9 @@ flowchart LR
 
 Nothing is executed: no Ansible code is imported, no templates or lookups are evaluated, and no host is contacted.
 
-**2. Package.** The model is serialised to JSON and embedded in a copy of `viewer.html`, together with the redacted file contents for the file viewer. The result is a **single static HTML file** with no external dependencies, and it's the only file the tool writes.
+**2. Package.** `atlas.py` joins the viewer's components (`viewer/index.html` plus the files it includes from `viewer/css/` and `viewer/js/`) into one page, then embeds the model as JSON, together with the redacted file contents for the file viewer. The result is a **single static HTML file** with no external dependencies, and it's the only file the tool writes.
 
-**3. Display (`viewer.html`).** When the page opens, plain JavaScript reads the embedded JSON and builds everything in the browser:
+**3. Display (`viewer/`).** When the page opens, plain JavaScript reads the embedded JSON and builds everything in the browser:
 
 - the maps are drawn as **SVG**, with a simple tree layout, collapsible nodes, and pan and zoom
 - the run plan, file viewer, checks and details panel are ordinary HTML built from the model
@@ -157,7 +160,7 @@ Nothing is executed: no Ansible code is imported, no templates or lookups are ev
 |---|---|
 | `atlas.py` | Python standard library: `os`, `pathlib`, `re`, `json`, `configparser` (for `ansible.cfg`), `shlex`, `fnmatch`, `argparse`, `datetime`, `webbrowser` (only for `--open`), `subprocess` (only to ask your local `git` whether the output file is ignored) |
 | | **PyYAML** with a `SafeLoader`, the only third-party package. It's already installed with Ansible. |
-| `viewer.html` | Plain HTML, CSS and JavaScript: no frameworks, libraries, fonts or CDNs |
+| `viewer/` | Plain HTML, CSS and JavaScript: no frameworks, libraries, fonts or CDNs |
 | Tests / CI | `unittest` (standard library); GitHub Actions runs the tests and checks that no generated output is committed |
 
 ### Built to be secure
@@ -169,7 +172,7 @@ Nothing is executed: no Ansible code is imported, no templates or lookups are ev
 - **Safe parsing.** YAML is loaded with `SafeLoader`, which can't construct Python objects. Untrusted text is always inserted into the page as text, never as HTML.
 - **Secrets stay out.** Vault content is never decrypted. Key files and `.env` files are never embedded. Secret-looking values are masked in tables and in the file viewer unless you pass `--no-redact`.
 - **Hard to leak.** Generated files are marked. The `.gitignore` allowlist, the pre-commit hook, CI, and a warning from `atlas.py` all stop them from being committed (see [Keep generated maps private](#keep-generated-maps-private)).
-- **Small and reviewable.** Two source files, one well-known dependency, no build step.
+- **Small and reviewable.** One Python script and a handful of small, commented viewer files; one well-known dependency; no build tools (`atlas.py` just joins the viewer files).
 
 ## Keep generated maps private
 
@@ -197,7 +200,22 @@ python3 -m unittest discover -s tests -v   # run the tests
 python3 atlas.py example-repo --open       # try your change
 ```
 
-`atlas.py` builds a JSON model of the repo and injects it into `viewer.html`, which is a template. When you add a new file to the project, also add it to the allowlist in `.gitignore`.
+`atlas.py` builds a JSON model of the repo and injects it into the viewer template. The viewer lives in `viewer/`:
+
+| File | What it is |
+|---|---|
+| `index.html` | Page shell. Lists the CSS and JS files to include, in order |
+| `css/theme.css` · `layout.css` · `map.css` · `details.css` · `pages.css` | Colours and base styles · page layout and overlays · map · details panel · full-page tabs |
+| `js/core.js` | Embedded data (`D`, `ENT`), DOM helpers, entity types and formatting |
+| `js/app.js` | Shared UI state and tab switching |
+| `js/map-model.js` · `map-view.js` | Map trees and layout · drawing, pan/zoom, selection |
+| `js/map-keyboard.js` · `map-search.js` · `map-hover.js` | Arrow-key navigation · search match bar · hover preview |
+| `js/details.js` · `details-renderers.js` · `code-view.js` | Details panel: selection and building blocks · one renderer per entity type · file listing |
+| `js/compare.js` | Compare two hosts |
+| `js/checks.js` · `run-plan.js` · `files.js` · `overview.js` | Lint findings · Run plan tab · Files tab · Overview tab |
+| `js/search.js` · `theme.js` · `persistence.js` · `shell.js` · `boot.js` | Search · light/dark · remembering your place · details panel and shortcuts overlay · startup |
+
+The JS files are plain scripts that share one global scope (no modules or bundler). `atlas.py` inlines each `/* @include … */` line of `index.html` in order, so `core.js` comes first and `boot.js` last. To add a component, create the file and add an include line for it. When you add a new file to the project outside `viewer/`, also add it to the allowlist in `.gitignore`.
 
 ## License
 

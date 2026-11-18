@@ -1,0 +1,54 @@
+/* Full-page tabs: run plan, files, overview */
+.page{position:absolute;inset:0;overflow:auto;padding:18px 22px 60px}
+.page h1{font-size:20px;margin:0 0 4px}
+.page h2{font-size:15px;margin:22px 0 8px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:12px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:default}
+.card b{font-size:22px;display:block}
+.card span{font-size:12px;color:var(--muted)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+.planbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 14px}
+.planbar label{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.planbar select,.planbar input{padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
+.play{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.playhead{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,var(--c-play) 7%,var(--panel))}
+.playhead .ttl{display:flex;gap:8px;align-items:center;font-weight:600;font-size:15px;cursor:pointer}
+.step{display:grid;grid-template-columns:44px 92px 1fr;gap:8px;padding:6px 14px;border-top:1px solid var(--soft);cursor:pointer;align-items:start}
+.step:hover{background:var(--soft)}
+.step.on{background:var(--accent-soft)}
+.step .n{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;font-size:12px;padding-top:2px}
+.step .ph{font-size:11px;color:var(--muted);padding-top:2px}
+.step .main{min-width:0}
+.step .nm{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.step .ds{font-size:12px;color:var(--muted);margin-top:1px}
+.step .via{font-size:11px;color:var(--c-role)}
+.step.dim{opacity:.7}
+.cond{font-size:11px;color:var(--warn)}
+.kbd{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--muted)}
+ul.plain{margin:4px 0;padding-left:18px}
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:-4px 0 14px;display:grid;gap:10px}
+.filters .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filters label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.filters input[type=text]{width:220px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip.off{text-decoration:line-through;color:var(--muted)}
+.cmd{display:flex;gap:8px;align-items:center}
+.cmd code{flex:1;padding:6px 8px;display:block;white-space:pre-wrap;word-break:break-all}
+.sumline{font-size:13px;margin:0 0 10px;color:var(--muted)}
+.sumline b{color:var(--ink)}
+.step.skip{opacity:.38}
+.filesbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 12px}
+.filesbar input{padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);width:280px}
+.ftree details{margin-left:4px}
+.ftree summary{cursor:pointer;padding:3px 6px;border-radius:6px;font-size:13px;color:var(--muted);list-style:none}
+.ftree summary::-webkit-details-marker{display:none}
+.ftree summary::before{content:"▸ ";}
+.ftree details[open]>summary::before{content:"▾ ";}
+.ftree summary:hover{background:var(--soft)}
+.frow{display:flex;gap:8px;align-items:center;padding:4px 8px 4px 22px;border-radius:6px;cursor:pointer;font-size:13px}
+.frow:hover,.frow.on{background:var(--accent-soft)}
+.frow .fk{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px}
+.frow .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .fs{font-size:11px;color:var(--muted)}
+.scriptcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
+.scriptcard:hover{border-color:var(--accent)}

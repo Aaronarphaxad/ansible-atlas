@@ -1,0 +1,55 @@
+/* Details panel and shared bits (badges, pills, tables, chips, code view, findings) */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;color:#fff;white-space:nowrap;flex:none}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--muted);margin:1px 2px;white-space:nowrap}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.dh{position:sticky;top:0;background:var(--panel);padding:14px 16px 10px;border-bottom:1px solid var(--line);z-index:2}
+.dh h2{margin:6px 0 2px;font-size:17px;line-height:1.3;word-break:break-word}
+.dh .crumbs{font-size:12px;color:var(--muted)}
+.dh .nav{display:flex;gap:6px;align-items:center}
+.dsec{padding:10px 16px;border-bottom:1px solid var(--soft)}
+.dsec h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.desc{font-size:14px;line-height:1.45;margin:2px 0 0}
+table.kv{width:100%;border-collapse:collapse;font-size:13px}
+table.kv td{padding:4px 6px;border-top:1px solid var(--soft);vertical-align:top;word-break:break-word}
+table.kv td:first-child{color:var(--muted);width:34%;white-space:nowrap;word-break:normal}
+table.vars td:first-child{white-space:normal;word-break:break-all;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+code{background:var(--code);padding:1px 4px;border-radius:4px;word-break:break-word}
+pre{background:var(--code);padding:6px 8px;border-radius:6px;margin:2px 0;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto}
+.src{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.lnk{color:var(--accent);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;max-width:100%}
+.lnk:hover{text-decoration:underline}
+.lnklist{display:flex;flex-direction:column;gap:3px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;background:var(--panel)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.ovr{font-size:11px;color:var(--muted);margin-top:2px}
+.ovr s{opacity:.8}
+.vfilter{width:100%;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);margin-bottom:6px;font-size:12px}
+.hlrow{background:var(--accent-soft)}
+.empty{color:var(--muted);font-size:13px}
+.note{font-size:12px;color:var(--muted);line-height:1.4}
+.warnbox{background:var(--warn-soft);color:var(--warn);padding:8px 10px;border-radius:8px;font-size:12px;margin-top:6px}
+.path{font-size:12px;color:var(--muted);margin:2px 0}
+details.dsec>summary{list-style:none;cursor:pointer}
+details.dsec>summary::-webkit-details-marker{display:none}
+details.dsec>summary h3{margin:0}
+details.dsec>summary h3::before{content:"▸";display:inline-block;width:10px;transition:transform .15s}
+details.dsec[open]>summary h3::before{transform:rotate(90deg)}
+details.dsec[open]>summary{margin-bottom:6px}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border-radius:8px;overflow:auto;max-height:65vh;padding:6px 0;line-height:1.5}
+.code .ln{display:flex;white-space:pre}
+.code .ln>i{font-style:normal;color:var(--muted);opacity:.6;width:38px;text-align:right;padding-right:10px;flex:none;user-select:none}
+.code .ln.hit{background:var(--accent-soft)}
+.code .jj{color:var(--c-template)}
+.code .vr{color:var(--c-var);cursor:pointer;text-decoration:underline dotted}
+#detail.wide{width:70vw;max-width:70vw}
+.sev{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:4px;color:#fff;flex:none}
+.sev.error{background:var(--c-error)}.sev.warning{background:var(--c-warning)}.sev.info{background:var(--c-info)}
+.finding{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px solid var(--soft);font-size:13px}
+.finding:first-child{border-top:0}
+.finding .fm{flex:1;min-width:0}
+a.srclink{cursor:pointer;color:var(--muted);text-decoration:none}
+a.srclink:hover{color:var(--accent);text-decoration:underline}
+.tagp{font-size:10px;padding:0 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:2px}
+ul.plain li{margin:2px 0}

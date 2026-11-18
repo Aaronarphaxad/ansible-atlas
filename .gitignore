@@ -16,7 +16,7 @@
 !/.github/
 !/.githooks/
 !/atlas.py
-!/viewer.html
+!/viewer/
 !/README.md
 !/LICENSE
 !/SECURITY.md
@@ -25,7 +25,7 @@
 
 # Even inside allowed folders, never commit generated or local-only files.
 *.html
-!/viewer.html
+!/viewer/index.html
 *.md
 !/README.md
 !/SECURITY.md

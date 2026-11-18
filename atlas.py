@@ -41,7 +41,8 @@ except ImportError:  # pragma: no cover
 
 VERSION = "1.3.0"
 HERE = Path(__file__).resolve().parent
-TEMPLATE = HERE / "viewer.html"
+VIEWER_DIR = HERE / "viewer"
+TEMPLATE = VIEWER_DIR / "index.html"   # page shell; pulls in viewer/css/* and viewer/js/*
 
 DEFAULT_EXCLUDES = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "env",
                     "__pycache__", ".tox", ".mypy_cache", ".pytest_cache", ".idea",
@@ -2039,13 +2040,34 @@ class Atlas:
 GENERATED_MARKER = "ansible-atlas-" + "generated-output"
 
 
-def render_html(model, template: Path):
-    html = template.read_text(encoding="utf-8")
+INCLUDE_RE = re.compile(r"^[ \t]*/\* @include ([\w./-]+) \*/[ \t]*$", re.M)
+
+
+def load_template(template: Path = None) -> str:
+    """Assemble the viewer: replace each `/* @include path */` line in viewer/index.html with
+    that file's contents (CSS inside <style>, JS inside the one <script>)."""
+    template = template or TEMPLATE
+    base = template.parent.resolve()
+
+    def inline(m):
+        path = (base / m.group(1)).resolve()
+        if base not in path.parents or not path.is_file():
+            sys.exit(f"viewer: cannot include {m.group(1)}")
+        text = path.read_text(encoding="utf-8")
+        if "</script" in text.lower() or "</style" in text.lower():
+            sys.exit(f"viewer: {m.group(1)} must not contain a closing </script> or </style> tag")
+        return f"/* ---- {m.group(1)} ---- */\n{text.rstrip()}\n"
+
+    return INCLUDE_RE.sub(inline, template.read_text(encoding="utf-8"))
+
+
+def render_html(model, template: Path = None):
+    html = load_template(template)
     data = json.dumps(model, ensure_ascii=False, separators=(",", ":"), default=str)
     data = data.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029").replace("<!--", "<\\!--")
     marker = "/*__ATLAS_DATA__*/null"
     if marker not in html:
-        sys.exit("viewer.html is missing the data marker")
+        sys.exit("viewer/js/core.js is missing the data marker")
     html = html.replace(marker, data, 1)
     tag = (f'<meta name="generator" content="{GENERATED_MARKER}">\n'
            f'<!-- {GENERATED_MARKER}: contains data from {model["meta"]["repo"]}. Do not commit or publish. -->\n')
