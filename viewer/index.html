@@ -7,7 +7,7 @@
   relative to this folder), then injecting the repo model at the __ATLAS_DATA__ marker in
   js/core.js. The output has no external dependencies, so it works offline.
 
-  Scripts are plain (non-module) JavaScript concatenated into ONE <script>, so they share a
+  Scripts are plain (non-module) JavaScript concatenated into ONE script element, so they share a
   single global scope. Order matters only for code that runs at load time: core.js first
   (it defines the data and helpers), boot.js last (it starts the app).
 -->

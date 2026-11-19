@@ -166,13 +166,18 @@ Nothing is executed: no Ansible code is imported, no templates or lookups are ev
 ### Built to be secure
 
 - **Offline only.** The generated page carries a Content-Security-Policy of `default-src 'none'`. The browser itself blocks every network request: no scripts, styles, fonts, images or fetches from anywhere. Everything the page needs is inside the file.
+- **Only its own code runs.** The policy allows exactly one script, identified by its SHA-256 hash, which `atlas.py` computes at build time. Even if text from a repo somehow ended up in the page as markup, the browser would refuse to run it.
 - **Exploration only.** There are no export, download or upload features. The only way data leaves the page is if you copy text by hand.
 - **No server, no ports.** You open the file directly (`file://`). Watch mode rewrites the file; it doesn't serve it.
-- **Read-only.** The script only reads files under the folder you give it and writes only its own output files.
-- **Safe parsing.** YAML is loaded with `SafeLoader`, which can't construct Python objects. Untrusted text is always inserted into the page as text, never as HTML.
+- **Read-only, and stays in the repo.** The script only reads files under the folder you give it (plus any `roles_path` from its `ansible.cfg`). Symlinks, `include_vars`, `import_tasks` and so on that point elsewhere on your machine are skipped with a warning. That way a repo can't pull your `~/.ssh` or `/etc` files into a map you then share.
+- **Safe parsing.** YAML is loaded with `SafeLoader`, which can't construct Python objects. YAML "alias bombs" (a few lines that expand to billions of values) are rejected, so a hostile repo can't hang the scan. Untrusted text is always inserted into the page as text, never as HTML.
+- **Private output.** The map is written via a fresh temporary file (never through an existing symlink) and is readable only by you (`0600`). It shows the repo path relative to your home folder (`~/…`), so it doesn't reveal your username.
 - **Secrets stay out.** Vault content is never decrypted. Key files and `.env` files are never embedded. Secret-looking values are masked in tables and in the file viewer unless you pass `--no-redact`.
 - **Hard to leak.** Generated files are marked. The `.gitignore` allowlist, the pre-commit hook, CI, and a warning from `atlas.py` all stop them from being committed (see [Keep generated maps private](#keep-generated-maps-private)).
 - **Small and reviewable.** One Python script and a handful of small, commented viewer files; one well-known dependency; no build tools (`atlas.py` just joins the viewer files).
+- **Locked-down CI.** The workflow has read-only permissions, pins its one action to a commit hash rather than a movable tag, and doesn't keep the GitHub token after checkout. Dependabot proposes updates to the pinned action.
+
+See [SECURITY.md](SECURITY.md) for the threat model and how to report a vulnerability.
 
 ## Keep generated maps private
 

@@ -2,6 +2,11 @@
 
     python -m unittest discover -s tests -v
 """
+import base64
+import hashlib
+import json
+import os
+import re
 import sys
 import tempfile
 import unittest
@@ -70,6 +75,42 @@ class AtlasTests(unittest.TestCase):
         self.assertIn(atlas.GENERATED_MARKER, html)        # so the hook/CI can refuse to commit it
         self.assertNotIn(atlas.GENERATED_MARKER, atlas.load_template())
         self.assertNotIn("@include", html)                  # every viewer component was inlined
+
+    def test_csp_allows_only_the_viewer_script(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "map.html"
+            atlas.main([str(EXAMPLE), "-o", str(out)])
+            html = out.read_text(encoding="utf-8")
+            if os.name == "posix":
+                self.assertEqual(out.stat().st_mode & 0o777, 0o600)   # only you can read it
+        self.assertNotIn("'unsafe-inline'; style", html)
+        script = re.search(r"<script>(.*?)</script>", html, re.S).group(1)
+        digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+        self.assertIn(f"script-src 'sha256-{digest}'", html)
+
+    def test_hostile_repo_cannot_read_outside_or_hang(self):
+        with tempfile.TemporaryDirectory() as outside, tempfile.TemporaryDirectory() as repo:
+            secret = Path(outside) / "secret.yml"
+            secret.write_text("stolen: TOPSECRETVALUE\n")
+            r = Path(repo)
+            (r / "site.yml").write_text(
+                "- hosts: all\n  tasks:\n    - include_vars: " + str(secret) + "\n"
+                "    - import_tasks: ../" + Path(outside).name + "/secret.yml\n")
+            (r / "link.yml").symlink_to(secret)
+            bomb = "a: &a [x,x,x,x,x,x,x,x,x,x]\n" + "".join(
+                f"{c}: &{c} [*{p},*{p},*{p},*{p},*{p},*{p},*{p},*{p},*{p},*{p}]\n"
+                for p, c in zip("abcdefgh", "bcdefghi"))
+            (r / "bomb.yml").write_text(bomb)
+            (Path(repo) / "x-->").mkdir()
+            model = atlas.Atlas(r).build()
+            dumped = json.dumps(model, default=str)
+            self.assertNotIn("TOPSECRETVALUE", dumped)
+            self.assertNotIn("link.yml", model["files"])                          # symlink out of the repo
+            self.assertTrue(any("bomb.yml" in w and "alias" in w for w in model["meta"]["warnings"]))
+            html = atlas.render_html(dict(model, meta=dict(model["meta"], repo="evil--><b>x")))
+            head = html.split("<script>")[0]                 # the comment; data inside the script is JSON-escaped
+            self.assertNotIn("--><b>", head)
+            self.assertIn("evil--__b_x", head)
 
 
 if __name__ == "__main__":

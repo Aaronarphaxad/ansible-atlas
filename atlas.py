@@ -21,9 +21,11 @@ Requires: Python 3.8+, PyYAML (already installed wherever Ansible is).
 from __future__ import annotations
 
 import argparse
+import base64
 import configparser
 import datetime as _dt
 import fnmatch
+import hashlib
 import itertools
 import json
 import os
@@ -31,6 +33,7 @@ import re
 import shlex
 import string
 import sys
+import tempfile
 import webbrowser
 from pathlib import Path
 
@@ -50,6 +53,7 @@ DEFAULT_EXCLUDES = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "env
 YAML_EXT = {".yml", ".yaml"}
 MAX_FILE_BYTES = 2_000_000
 MAX_VALUE_CHARS = 4000
+MAX_YAML_NODES = 1_000_000   # a YAML document may expand (via aliases) to at most this many nodes
 
 SECRET_RE = re.compile(r"(pass(word|wd|phrase)?|secret|token|private|credential|api_?key|"
                        r"access_?key|secret_?key|auth|cert_?key|_key$|^key$)", re.I)
@@ -63,7 +67,44 @@ class VaultValue(str):
 
 
 class Loader(yaml.SafeLoader):
-    """SafeLoader that records line numbers and tolerates Ansible tags."""
+    """SafeLoader that records line numbers and tolerates Ansible tags.
+
+    SafeLoader never runs code or builds arbitrary Python objects. On top of that, each
+    document is checked for "alias bombs" (a few lines of `&a`/`*a` anchors that expand to
+    billions of nodes) before it is constructed, so a hostile repo can't hang the scan."""
+
+    def compose_document(self):
+        node = super().compose_document()
+        if _expanded_size(node, MAX_YAML_NODES) > MAX_YAML_NODES:
+            raise yaml.YAMLError(f"document expands to more than {MAX_YAML_NODES:,} nodes "
+                                 "through aliases (YAML alias bomb?); skipped")
+        return node
+
+
+def _expanded_size(node, limit):
+    """Number of nodes `node` turns into once every alias is expanded, stopping early past
+    `limit`. Shared sub-trees are counted once per use (that's what expansion costs);
+    recursive references count as one node."""
+    memo, active = {}, set()
+
+    def size(n):
+        key = id(n)
+        if key in memo:
+            return memo[key]
+        if key in active or isinstance(n, yaml.ScalarNode):
+            return 1
+        active.add(key)
+        total = 1
+        kids = n.value if isinstance(n, yaml.SequenceNode) else [x for kv in n.value for x in kv]
+        for k in kids:
+            total += size(k)
+            if total > limit:
+                break
+        active.discard(key)
+        memo[key] = total
+        return total
+
+    return size(node) if node is not None else 0
 
 
 def _construct_mapping(loader, node, deep=False):
@@ -619,6 +660,16 @@ class Atlas:
         e.update(kw)
         return e
 
+    def allowed(self, p: Path):
+        """True if p (after following symlinks) is inside the repo or a configured roles_path.
+        Stops a repo from pulling in files from elsewhere on this machine, e.g. via a symlink
+        to ~/.ssh or `include_vars: /etc/...`, and embedding them in a map that gets shared."""
+        try:
+            r = Path(p).resolve()
+        except (OSError, RuntimeError):
+            return False
+        return any(r == b or b in r.parents for b in [self.root, *self.roles_paths])
+
     def load_yaml(self, path: Path):
         path = Path(path)
         key = str(path)
@@ -626,7 +677,9 @@ class Atlas:
             return self.yaml_cache[key]
         data = None
         try:
-            if path.stat().st_size > MAX_FILE_BYTES:
+            if not self.allowed(path):
+                self.warn(f"Skipped {path}: outside the repo")
+            elif path.stat().st_size > MAX_FILE_BYTES:
                 self.warn(f"Skipped large file {self.rel(path)}")
             else:
                 text = path.read_text(encoding="utf-8", errors="replace")
@@ -643,6 +696,8 @@ class Atlas:
             self.warn(f"YAML error in {self.rel(path)}" + (f" line {mark.line+1}" if mark else "") + f": {getattr(ex, 'problem', ex)}")
         except OSError as ex:
             self.warn(f"Cannot read {self.rel(path)}: {ex}")
+        except RecursionError:
+            self.warn(f"Skipped {self.rel(path)}: nested too deeply")
         self.yaml_cache[key] = data
         return data
 
@@ -650,7 +705,11 @@ class Atlas:
         for dp, dns, fns in os.walk(self.root):
             dns[:] = sorted(d for d in dns if d not in self.excludes and not d.startswith("."))
             for f in sorted(fns):
-                self.files.append(Path(dp) / f)
+                p = Path(dp) / f
+                if p.is_symlink() and not self.allowed(p):
+                    self.warn(f"Skipped symlink {self.rel(p)}: points outside the repo")
+                    continue
+                self.files.append(p)
 
     # ---------------- ansible.cfg
     def parse_cfg(self):
@@ -673,7 +732,12 @@ class Atlas:
             for p in re.split(r"[:,]", rp):
                 p = p.strip()
                 if p:
-                    self.roles_paths.append((self.cfg_path.parent / os.path.expanduser(p)).resolve())
+                    rp_dir = (self.cfg_path.parent / os.path.expanduser(p)).resolve()
+                    # A roles_path of "/" or your home folder would let the repo read anything.
+                    if rp_dir == Path(rp_dir.anchor) or rp_dir in (Path.home(), *Path.home().parents):
+                        self.warn(f"Ignored roles_path {p}: too broad to scan safely")
+                    else:
+                        self.roles_paths.append(rp_dir)
 
     # ---------------- inventories
     def is_vars_dir_file(self, f: Path):
@@ -2022,7 +2086,7 @@ class Atlas:
         for e in self.entities.values():
             counts[e["type"]] = counts.get(e["type"], 0) + 1
         return {
-            "meta": {"tool": "Ansible Atlas", "version": VERSION, "repo": self.root.name, "repo_path": str(self.root),
+            "meta": {"tool": "Ansible Atlas", "version": VERSION, "repo": self.root.name, "repo_path": _home_relative(self.root),
                      "generated": _dt.datetime.now().isoformat(timespec="seconds"), "redacted": self.redact,
                      "cfg_path": self.rel(self.cfg_path) if self.cfg_path else None,
                      "cfg": redact_tree(self.cfg, self.redact),
@@ -2038,6 +2102,14 @@ class Atlas:
 # Every generated file carries this marker so the repo's pre-commit hook and CI can
 # refuse to commit it. Built from parts so this source file itself never matches.
 GENERATED_MARKER = "ansible-atlas-" + "generated-output"
+
+
+def _home_relative(p: Path) -> str:
+    """'/Users/alice/src/infra' → '~/src/infra', so a shared map doesn't reveal your username."""
+    try:
+        return "~/" + p.relative_to(Path.home()).as_posix()
+    except ValueError:
+        return str(p)
 
 
 INCLUDE_RE = re.compile(r"^[ \t]*/\* @include ([\w./-]+) \*/[ \t]*$", re.M)
@@ -2069,15 +2141,44 @@ def render_html(model, template: Path = None):
     if marker not in html:
         sys.exit("viewer/js/core.js is missing the data marker")
     html = html.replace(marker, data, 1)
+    html = lock_scripts(html)
+    # The repo name is a directory name, which can contain anything (even "-->"), so keep it
+    # to safe characters before it goes into an HTML comment.
+    repo = re.sub(r"[^\w .@+-]", "_", str(model["meta"]["repo"]))
     tag = (f'<meta name="generator" content="{GENERATED_MARKER}">\n'
-           f'<!-- {GENERATED_MARKER}: contains data from {model["meta"]["repo"]}. Do not commit or publish. -->\n')
+           f'<!-- {GENERATED_MARKER}: contains data from {repo}. Do not commit or publish. -->\n')
     return html.replace("<head>", "<head>\n" + tag, 1)
 
 
+SCRIPT_RE = re.compile(r"<script>(.*?)</script>", re.S)
+
+
+def lock_scripts(html: str) -> str:
+    """Replace script-src 'unsafe-inline' in the page's CSP with the SHA-256 hash of the
+    viewer's own <script>. The browser then runs that exact script and nothing else, so
+    even if some repo text ever slipped past escaping as markup, it could not execute."""
+    scripts = SCRIPT_RE.findall(html)
+    if len(scripts) != 1 or "script-src 'unsafe-inline'" not in html:
+        sys.exit("viewer/index.html must have exactly one inline <script> and a script-src 'unsafe-inline' CSP")
+    digest = base64.b64encode(hashlib.sha256(scripts[0].encode("utf-8")).digest()).decode()
+    return html.replace("script-src 'unsafe-inline'", f"script-src 'sha256-{digest}'", 1)
+
+
 def atomic_write(path: Path, text: str):
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    """Write via a fresh temp file in the same folder, then rename over the target.
+    mkstemp never follows an existing symlink and creates the file readable only by you
+    (0600): the map can contain hostnames, IPs and, with --no-redact, secrets."""
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.resolve().parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def git_exposure(path: Path):
