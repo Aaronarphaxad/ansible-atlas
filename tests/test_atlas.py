@@ -68,7 +68,7 @@ class AtlasTests(unittest.TestCase):
 
     def test_writes_one_locked_down_html_file(self):
         with tempfile.TemporaryDirectory() as d:
-            atlas.main([str(EXAMPLE), "-o", str(Path(d) / "map.html")])
+            atlas.main([str(EXAMPLE), "-o", str(Path(d) / "map.html"), "--no-open"])
             self.assertEqual([p.name for p in Path(d).iterdir()], ["map.html"])
             html = (Path(d) / "map.html").read_text(encoding="utf-8")
         self.assertIn("default-src 'none'", html)          # browser blocks all network requests
@@ -79,7 +79,7 @@ class AtlasTests(unittest.TestCase):
     def test_csp_allows_only_the_viewer_script(self):
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "map.html"
-            atlas.main([str(EXAMPLE), "-o", str(out)])
+            atlas.main([str(EXAMPLE), "-o", str(out), "--no-open"])
             html = out.read_text(encoding="utf-8")
             if os.name == "posix":
                 self.assertEqual(out.stat().st_mode & 0o777, 0o600)   # only you can read it
@@ -111,6 +111,24 @@ class AtlasTests(unittest.TestCase):
             head = html.split("<script>")[0]                 # the comment; data inside the script is JSON-escaped
             self.assertNotIn("--><b>", head)
             self.assertIn("evil--__b_x", head)
+
+    def test_default_output_is_a_private_folder_in_home(self):
+        with tempfile.TemporaryDirectory() as d:
+            old = {k: os.environ.get(k) for k in ("HOME", "USERPROFILE")}
+            os.environ["HOME"] = os.environ["USERPROFILE"] = d
+            try:
+                atlas.main([str(EXAMPLE), "--no-open"])
+            finally:
+                for k, v in old.items():
+                    if v is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = v
+            out = Path(d) / "ansible-atlas-maps" / "example-repo.html"
+            self.assertTrue(out.is_file())
+            if os.name == "posix":
+                self.assertEqual(out.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(out.parent.stat().st_mode & 0o777, 0o700)
 
 
 if __name__ == "__main__":

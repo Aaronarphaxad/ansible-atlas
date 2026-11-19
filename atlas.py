@@ -10,13 +10,13 @@ Nothing is executed, no Ansible code is imported, nothing connects to the
 network, no server runs, and the page has no export features.
 
 Usage:
-    python3 atlas.py /path/to/repo                 # writes ./ansible-atlas.html
-    python3 atlas.py /path/to/repo -o map.html --open
+    python3 atlas.py /path/to/repo                 # saves ~/ansible-atlas-maps/<repo>.html and opens it
+    python3 atlas.py /path/to/repo -o ~/maps/x.html --no-open
     python3 atlas.py /path/to/repo --no-redact     # show secret-looking values
-    python3 atlas.py /path/to/repo --watch         # rebuild when files change
-    python3 atlas.py /path/to/repo --lint          # print checks in the terminal
+    python3 atlas.py /path/to/repo -w              # rebuild when files change
+    python3 atlas.py /path/to/repo -l              # print checks in the terminal
 
-Requires: Python 3.8+, PyYAML (already installed wherever Ansible is).
+Requires: Python 3.8+ and PyYAML (python3 -m pip install --user pyyaml).
 """
 from __future__ import annotations
 
@@ -37,12 +37,31 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
+def _missing_pyyaml():  # pragma: no cover
+    """Explain how to install PyYAML for the Python that is actually running this script."""
+    py = sys.executable or "python3"
+    ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+    msg = [f"Ansible Atlas needs PyYAML, which isn't installed for this Python ({py}, version {ver}).",
+           "Install it one of these ways, then run the same command again:", ""]
+    if os.name == "nt":
+        msg += ["  py -m pip install --user pyyaml"]
+    else:
+        msg += [f"  {py} -m pip install --user pyyaml", "",
+                "If pip refuses with 'externally-managed-environment' (Homebrew Python, Debian 12+, Ubuntu 23.04+),",
+                "use a virtual environment instead:",
+                "  python3 -m venv ~/.venvs/atlas && ~/.venvs/atlas/bin/pip install pyyaml",
+                "  ~/.venvs/atlas/bin/python atlas.py <path-to-ansible-repo>", "",
+                "or the system package:  sudo apt install python3-yaml   |   sudo dnf install python3-pyyaml"]
+    msg += ["", "Tip: the Python that runs your Ansible usually has PyYAML already."]
+    sys.exit("\n".join(msg))
+
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
-    sys.exit("PyYAML is required (pip install pyyaml, or use the Python that runs Ansible).")
+    _missing_pyyaml()
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 HERE = Path(__file__).resolve().parent
 VIEWER_DIR = HERE / "viewer"
 TEMPLATE = VIEWER_DIR / "index.html"   # page shell; pulls in viewer/css/* and viewer/js/*
@@ -2181,6 +2200,29 @@ def atomic_write(path: Path, text: str):
         raise
 
 
+DEFAULT_MAP_DIR = "ansible-atlas-maps"      # created in your home folder
+
+
+def resolve_output(root: Path, output):
+    """Where to save the map: -o FILE, -o DIR/ (uses <repo>.html), or ~/ansible-atlas-maps/<repo>.html."""
+    name = (re.sub(r"[^\w.-]+", "-", root.resolve().name).strip("-") or "repo") + ".html"
+    if not output:
+        d = Path.home() / DEFAULT_MAP_DIR
+        if not d.exists():
+            d.mkdir(mode=0o700, parents=True)
+            try:
+                d.chmod(0o700)                  # private: only you can open the folder
+            except OSError:
+                pass
+        return d / name
+    out = Path(output).expanduser()
+    if out.is_dir() or str(output).endswith(("/", "\\")):
+        out.mkdir(parents=True, exist_ok=True)
+        return out / name
+    out.parent.mkdir(parents=True, exist_ok=True)
+    return out
+
+
 def git_exposure(path: Path):
     """Return a warning if `path` is inside a git work tree and NOT ignored."""
     import subprocess
@@ -2196,7 +2238,7 @@ def git_exposure(path: Path):
         return None
     return (f"WARNING: {path} is inside the git repo {top.stdout.strip()} and is NOT git-ignored.\n"
             f"         It contains hostnames, IPs and variable values. Add it to .gitignore or write it elsewhere\n"
-            f"         (e.g. -o ~/ansible-atlas.html).")
+            f"         (leave out -o to use ~/ansible-atlas-maps/).")
 
 
 def snapshot(root: Path, excludes):
@@ -2230,14 +2272,16 @@ def print_findings(model, limit=200):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Build an offline, interactive map of an Ansible repository.")
     ap.add_argument("repo", nargs="?", default=".", help="Path to the Ansible repo (default: current dir)")
-    ap.add_argument("-o", "--output", default="ansible-atlas.html", help="Output HTML file")
-    ap.add_argument("--lint", action="store_true", help="Print checks to the terminal; exit code 2 if any error-level finding")
-    ap.add_argument("--watch", action="store_true", help="Keep running and rebuild when files change (the page reloads itself)")
+    ap.add_argument("-o", "--output", metavar="PATH",
+                    help=f"Where to save the map: a file, or a folder (default: ~/{DEFAULT_MAP_DIR}/<repo-name>.html)")
+    ap.add_argument("--no-open", dest="open", action="store_false", help="Don't open the map in the browser")
+    ap.add_argument("--open", dest="open", action="store_true", help=argparse.SUPPRESS)   # old flag, now the default
+    ap.add_argument("-l", "--lint", action="store_true", help="Print checks to the terminal; exit code 2 if any error-level finding")
+    ap.add_argument("-w", "--watch", action="store_true", help="Keep running and rebuild when files change (the page reloads itself)")
     ap.add_argument("--interval", type=float, default=2.0, help="Seconds between change checks in --watch mode (default 2)")
     ap.add_argument("--no-redact", action="store_true", help="Show values of secret-looking variables")
     ap.add_argument("--no-sources", action="store_true", help="Don't embed file contents (file viewer shows names only)")
     ap.add_argument("--exclude", action="append", default=[], help="Directory name to skip (repeatable)")
-    ap.add_argument("--open", action="store_true", help="Open the result in the default browser")
     a = ap.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):        # Windows consoles may not be UTF-8
         try:
@@ -2247,7 +2291,7 @@ def main(argv=None):
     root = Path(a.repo).expanduser()
     if not root.is_dir():
         sys.exit(f"Not a directory: {root}")
-    out = Path(a.output).expanduser()
+    out = resolve_output(root, a.output)
     excludes = set(DEFAULT_EXCLUDES) | set(a.exclude)
 
     def build_once(quiet=False):
@@ -2270,14 +2314,19 @@ def main(argv=None):
                 if msg:
                     print(msg, file=sys.stderr)
             for w in written:
-                print(f"Wrote {w.resolve()}")
+                print(f"Map saved to {w.resolve()}")
         return model
 
     model = build_once()
     if a.lint:
         print_findings(model)
     if a.open:
-        webbrowser.open(out.resolve().as_uri())
+        try:
+            opened = webbrowser.open(out.resolve().as_uri())
+        except Exception:
+            opened = False
+        if not opened:
+            print("Couldn't open a browser automatically; open the file above yourself.")
     if a.watch:
         import time
         print(f"Watching {root.resolve()} every {a.interval:g}s. The open page reloads itself. Ctrl-C to stop.")
