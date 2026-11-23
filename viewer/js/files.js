@@ -14,10 +14,11 @@ function renderFiles(){
   const view=$("#view");const page=el("div",{class:"page"});view.append(page);
   const paths=Object.keys(D.files||{}).sort();
   const scripts=Object.values(ENT).filter(e=>e.type==="script").sort((a,b)=>a.path.localeCompare(b.path));
-  const KINDS=[["all","All"],["script",`Scripts (${scripts.length})`],["playbook","Playbooks"],["tasks","Tasks"],["template","Templates"],["vars","Vars"],["inventory","Inventory"]];
+  const notes=paths.filter(p=>D.files[p].kind==="notes").length;
+  const KINDS=[["all","All"],["notes",`Notes (${notes})`],["script",`Scripts (${scripts.length})`],["playbook","Playbooks"],["tasks","Tasks"],["template","Templates"],["vars","Vars"],["inventory","Inventory"]];
   const q=el("input",{type:"search",placeholder:`Filter ${paths.length} files…`,value:fileState.q,oninput:e=>{fileState.q=e.target.value;draw();}});
   const chipsBox=el("div",{class:"chips"});
-  page.append(el("h1",null,"Files"),el("p",{class:"note"},"Every file in the repo. Click one to read it; secret-looking values are masked."+(D.meta.redacted?"":" (Redaction is OFF for this map.)")),
+  page.append(el("h1",null,"Files"),el("p",{class:"note"},"Every file in the repo. Click one to read it (Markdown notes open as a formatted preview); secret-looking values are masked."+(D.meta.redacted?"":" (Redaction is OFF for this map.)")),
     el("div",{class:"filesbar"},q,chipsBox));
   const body=el("div",{class:"ftree"});page.append(body);
   function draw(){

@@ -61,7 +61,7 @@ try:
 except ImportError:  # pragma: no cover
     _missing_pyyaml()
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 HERE = Path(__file__).resolve().parent
 VIEWER_DIR = HERE / "viewer"
 TEMPLATE = VIEWER_DIR / "index.html"   # page shell; pulls in viewer/css/* and viewer/js/*
@@ -385,7 +385,7 @@ def bare_refs(v):
 # --------------------------------------------------------------------------- file contents (redacted)
 
 TEXT_EXT = {".yml", ".yaml", ".j2", ".jinja", ".jinja2", ".cfg", ".ini", ".conf", ".sh", ".bash", ".zsh", ".ksh",
-            ".ps1", ".py", ".pl", ".rb", ".json", ".md", ".txt", ".toml", ".service", ".timer", ".socket",
+            ".ps1", ".py", ".pl", ".rb", ".json", ".md", ".markdown", ".mdown", ".mkd", ".txt", ".toml", ".service", ".timer", ".socket",
             ".xml", ".properties", ".sql", ".rst", ".csv", ".tf", ".hcl", ".env.example"}
 SCRIPT_EXT = {".sh", ".bash", ".zsh", ".ksh", ".ps1"}
 SCRIPT_DIR_EXT = {".py", ".pl", ".rb"}          # scripts only when inside scripts/, bin/ or files/
@@ -1917,6 +1917,8 @@ class Atlas:
             if rel not in kinds and ("group_vars" in parts or "host_vars" in parts or
                                      (len(parts) > 2 and parts[-2] in ("defaults", "vars"))):
                 kinds[rel] = "vars"
+            elif rel not in kinds and Path(rel).suffix.lower() in (".md", ".markdown", ".mdown", ".mkd"):
+                kinds[rel] = "notes"
             elif rel not in kinds and Path(rel).name == "ansible.cfg":
                 kinds[rel] = "config"
             elif rel not in kinds and Path(rel).parts[-2:-1] == ("meta",):

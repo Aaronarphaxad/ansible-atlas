@@ -42,7 +42,7 @@ const RENDER={
         el("div",{class:"note"},[f.kind?f.kind:"file",f.lines?` · ${f.lines} lines`:"",` · ${fmtSize(f.size||0)}`].join("")),
         special?el("div",null,"Also shown as: ",lnk(special)):null,wideBtn()),
       here.length?fold(`Defined in this file (${here.length})`,linkList(here)):null,
-      sec("Source",fileSource(e.path,opt))];
+      isMarkdown(e.path)?sec("Note",markdownView(e.path,opt)):sec("Source",fileSource(e.path,opt))];
   },
   script:(e,opt)=>[
     sec("How it runs",el("ul",{class:"plain"},e.summary.map(x=>el("li",null,x))),

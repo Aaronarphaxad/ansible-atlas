@@ -80,7 +80,7 @@ The map is the only file written. Re-run whenever the repo changes (about a seco
 - **Playbooks, Roles and Inventory maps:** zoomable, collapsible trees from playbooks down to individual tasks, and from inventories down to hosts. Hover a node for a summary, or move around with the arrow keys.
 - **Hosts and variables:** a host's groups, the plays that target it, and its merged variables, with the file and line behind each value. **Compare** two hosts side by side with the differences highlighted. Click any variable to see everywhere it's defined and used, including in templates.
 - **Run plan:** a numbered list of what a playbook does, in order, with target hosts. **Tags & limit** previews `--tags`, `--skip-tags` and `--limit`, and the matching `ansible-playbook` command is shown with a Copy button.
-- **Files & scripts:** read any file in the browser with secrets masked. The **Scripts** filter lists shell scripts and how each is run: on the hosts, on the control node, or by hand.
+- **Files, notes & scripts:** read any file in the browser with secrets masked. Markdown notes open as a formatted preview (switch to Source any time), links between notes open in the viewer, and note text is searchable. External links are shown but never opened. The **Scripts** filter lists shell scripts and how each is run: on the hosts, on the control node, or by hand.
 - **Checks:** lint results (errors, warnings, info) in the Overview and on each affected item.
 - **Search** (`/`) across everything, with matches highlighted on the map; light/dark mode (`T`); keyboard shortcuts (`?`).
 

@@ -10,6 +10,9 @@ const INDEX=[];
 // task/play id → variable names it uses.
 const USES_BY_OWNER=new Map();
 
+// How much note text goes into the search index: per note, and in total.
+const NOTE_INDEX_MAX=50000,NOTE_INDEX_BUDGET=4000000;
+
 // Build the search index once at startup (and the "variables used by" lookup).
 function buildIndex(){
   const add=(eid,kind,label,ctx,text,extra)=>INDEX.push({eid,kind,label,ctx,text:text.toLowerCase(),ll:String(label).toLowerCase(),...extra});
@@ -26,7 +29,12 @@ function buildIndex(){
     add(e.id,kind,e.label,ctxOf(e),[e.label,e.module,e.desc,e.src,e.path,e.sub,fmt(e.hosts),fmt(e.when),fmt(e.tags),e.args?JSON.stringify(e.args).slice(0,600):""].filter(Boolean).join(" "));
   }
   for(const l of USES_BY_OWNER.values())l.sort();
-  for(const p of Object.keys(D.files||{})){const f=D.files[p];INDEX.push({eid:"file:"+p,kind:"file",label:p,ctx:(f.kind||"file")+(f.lines?` · ${f.lines} lines`:""),text:p.toLowerCase(),ll:p.toLowerCase()});}
+  // Markdown notes are searchable by their text too (capped, so huge repos stay fast).
+  let noteBudget=NOTE_INDEX_BUDGET;
+  for(const p of Object.keys(D.files||{})){const f=D.files[p];
+    let text=p;
+    if(f.kind==="notes"&&f.text&&noteBudget>0){const t=f.text.slice(0,Math.min(NOTE_INDEX_MAX,noteBudget));noteBudget-=t.length;text+=" "+t;}
+    INDEX.push({eid:"file:"+p,kind:"file",label:p,ctx:(f.kind||"file")+(f.lines?` · ${f.lines} lines`:""),text:text.toLowerCase(),ll:p.toLowerCase()});}
 }
 
 // Search ranking: lower kinds are listed first when scores tie.
@@ -67,9 +75,8 @@ function doSearch(q){
 // Open search result i.
 function pick(i){
   const h=hits[i];if(!h)return;$("#results").classList.remove("open");
-  if(h.kind==="file"){select(h.eid,{});return;}
   let hl=null;
-  if(h.kind==="template"||h.kind==="script"){const t=($("#q").value.replace(/^\w+:\s*/,"").trim().split(/\s+/)[0]||"").toLowerCase();
+  if(h.kind==="file"||h.kind==="template"||h.kind==="script"){const t=($("#q").value.replace(/^\w+:\s*/,"").trim().split(/\s+/)[0]||"").toLowerCase();
     if(t){hl=[];((D.files[ENT[h.eid].path]||{}).text||"").split("\n").forEach((l,i)=>{if(l.toLowerCase().includes(t))hl.push(i+1);});}}
-  select(h.eid,{search:true,hl:hl&&hl.length?hl:null});
+  select(h.eid,{search:h.kind!=="file",hl:hl&&hl.length?hl:null});
 }

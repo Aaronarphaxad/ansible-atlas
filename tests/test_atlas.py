@@ -51,6 +51,11 @@ class AtlasTests(unittest.TestCase):
         self.assertEqual(how["scripts/backup-db.sh"], "Run on the control node")
         self.assertIn("Not referenced", how["scripts/rotate-logs.sh"])
 
+    def test_markdown_notes_are_embedded_for_preview(self):
+        note = self.model["files"]["docs/runbook.md"]
+        self.assertEqual(note["kind"], "notes")
+        self.assertIn("# Web tier runbook", note["text"])
+
     def test_checks(self):
         rules = {f["rule"] for f in self.model["findings"]}
         self.assertTrue({"plaintext-secret", "undefined-var"} <= rules)

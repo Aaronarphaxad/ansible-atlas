@@ -29,6 +29,7 @@
 *.md
 !/README.md
 !/SECURITY.md
+!/example-repo/**/*.md
 *.json
 *.bundle
 *.zip
